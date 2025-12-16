@@ -1,0 +1,7 @@
+<svg width="400" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="500" fill="#e0e0e0"/>
+  <circle cx="200" cy="180" r="60" fill="#999" stroke="#666" stroke-width="2"/>
+  <path d="M 140 280 Q 200 260 260 280" stroke="#666" stroke-width="3" fill="none"/>
+  <text x="200" y="350" font-family="Arial, sans-serif" font-size="20" fill="#666" text-anchor="middle">Personal Photo 2</text>
+</svg>
+
