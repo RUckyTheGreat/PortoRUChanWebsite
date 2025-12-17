@@ -1,62 +1,401 @@
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { useEffect, useRef } from "react";
-import { CustomEase } from "gsap/CustomEase";
-import { CustomBounce } from "gsap/CustomBounce";
-import { CustomWiggle } from "gsap/CustomWiggle";
-import { RoughEase, ExpoScaleEase, SlowMo } from "gsap/EasePack";
-
-import { Draggable } from "gsap/Draggable";
-import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
-import { EaselPlugin } from "gsap/EaselPlugin";
-import { Flip } from "gsap/Flip";
-import { GSDevTools } from "gsap/GSDevTools";
-import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { MotionPathHelper } from "gsap/MotionPathHelper";
-import { MotionPathPlugin } from "gsap/MotionPathPlugin";
-import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
-import { Observer } from "gsap/Observer";
-import { Physics2DPlugin } from "gsap/Physics2DPlugin";
-import { PhysicsPropsPlugin } from "gsap/PhysicsPropsPlugin";
-import { PixiPlugin } from "gsap/PixiPlugin";
 import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ScrollSmoother } from "gsap/ScrollSmoother";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { SplitText } from "gsap/SplitText";
-import { TextPlugin } from "gsap/TextPlugin";
 
-gsap.registerPlugin(ScrambleTextPlugin, ScrollTrigger);
+gsap.registerPlugin(ScrambleTextPlugin, ScrollTrigger, SplitText);
+
+import ProjectCard from "./ProjectCard";
 
 export default function App() {
-  const textRef = useRef(null);
+
+document.fonts.ready.then(() => {
+  gsap.utils.toArray(".font-split-1").forEach((el) => {
+    if (el._split) return;
+
+    gsap.set(el, { opacity: 1 });
+
+    const split = SplitText.create(el, {
+      type: "words",
+      wordsClass: "word",
+      ignore: "sup"
+    });
+
+    el._split = split;
+
+    gsap.from(split.words, {
+      y: -80,
+      opacity: 0,
+      rotation: "random(-40, 40)",
+      stagger: 0.08,
+      duration: 1,
+      ease: "back.out(1.7)",
+      scrollTrigger: {
+        trigger: el,
+        start: "top 80%",     // mulai pas masuk viewport
+        once: true            // jalan sekali saja
+      }
+    });
+  });
+});
+//---------------------------------------------------------------
 
   useGSAP(() => {
-    // HERO TITLE INTRO
-    gsap.from(".hero-title", {
-      opacity: 0,
-      y: 50,
+    const showAnim = gsap.from(".main-header", {
+      yPercent: -100,
+      duration: 0.2,
+      paused: true
+    }).progress(1);
+
+    ScrollTrigger.create({
+      start: "top top",
+      end: "max",
+      onUpdate: (self) => {
+        self.direction === -1
+          ? showAnim.play()
+          : showAnim.reverse();
+      }
+    });
+  });
+
+useGSAP(() => {
+  gsap.utils.toArray(".glitch").forEach((el) => {
+    const text1 = el.dataset.text1;
+    const text2 = el.dataset.text2;
+
+    // safety check
+    if (!text1 || !text2) return;
+
+    // set initial text
+    gsap.set(el, { textContent: text1 });
+
+    const tl = gsap.timeline({ repeat: -1 });
+
+    tl
+      // HOLD text 1
+      .to({}, { duration: 5 })
+
+      // GLITCH → text 2
+      .to(el, {
+        duration: 1.2,
+        scrambleText: {
+          text: text2,
+          chars: "■◻□▯▮▪",
+          revealDelay: 0.1,
+          tweenLength: true
+        },
+        ease: "power2.out"
+      })
+
+      // HOLD text 2
+      .to({}, { duration: 5 })
+
+      // GLITCH → text 1
+      .to(el, {
+        duration: 1.2,
+        scrambleText: {
+          text: text1,
+          chars: "■◻□▯▮▪",
+          revealDelay: 0.1,
+          tweenLength: true
+        },
+        ease: "power2.out"
+      });
+  });
+});
+
+// Scroll-triggered section animations
+useGSAP(() => {
+  // Get all sections except hero
+  const sections = gsap.utils.toArray(".section:not(.hero-section)");
+  
+  // Set initial state for all sections (hidden)
+  gsap.set(sections, {
+    opacity: 0,
+    y: 60,
+    scale: 0.95
+  });
+
+  // Animate each section when it enters viewport
+  sections.forEach((section, index) => {
+    gsap.to(section, {
+      opacity: 1,
+      y: 0,
+      scale: 1,
       duration: 1,
       ease: "power3.out",
+      scrollTrigger: {
+        trigger: section,
+        start: "top 80%",
+        end: "top 50%",
+        toggleActions: "play none none none",
+        once: true
+      }
     });
 
-    // SCRAMBLE TEXT
-    gsap.to(textRef.current, {
+    // Animate section number
+    const sectionNumber = section.querySelector(".section-number");
+    if (sectionNumber) {
+      gsap.from(sectionNumber, {
+        opacity: 0,
+        x: -30,
+        duration: 0.8,
+        delay: 0.2,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: section,
+          start: "top 80%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+
+    // Animate section title
+    const sectionTitle = section.querySelector(".section-title");
+    if (sectionTitle) {
+      gsap.from(sectionTitle, {
+        opacity: 0,
+        x: -50,
+        duration: 1,
+        delay: 0.3,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: section,
+          start: "top 80%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+
+    // Animate content containers with stagger
+    const contentItems = section.querySelectorAll(".content-container > *:not(.section-title)");
+    if (contentItems.length > 0) {
+      gsap.from(contentItems, {
+        opacity: 0,
+        y: 40,
+        duration: 0.8,
+        stagger: 0.15,
+        delay: 0.4,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: section,
+          start: "top 75%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+
+    // Animate profile content grid items
+    const profileContent = section.querySelector(".profile-content");
+    if (profileContent) {
+      const gridItems = profileContent.querySelectorAll(".biodata-wrapper, .education-wrapper");
+      gsap.from(gridItems, {
+        opacity: 0,
+        x: (index) => index % 2 === 0 ? -50 : 50,
+        duration: 0.9,
+        stagger: 0.2,
+        delay: 0.5,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: section,
+          start: "top 75%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+
+    // Animate contact content grid
+    const contactContent = section.querySelector(".contact-content");
+    if (contactContent) {
+      const contactItems = contactContent.querySelectorAll(".social-links-section, .contact-form-section");
+      gsap.from(contactItems, {
+        opacity: 0,
+        x: (index) => index % 2 === 0 ? -50 : 50,
+        duration: 0.9,
+        stagger: 0.2,
+        delay: 0.5,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: section,
+          start: "top 75%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+  });
+
+  // Animate cover-div section
+  const coverDiv = document.querySelector(".cover-div");
+  if (coverDiv) {
+    gsap.set(coverDiv, { opacity: 0, scale: 0.9 });
+    gsap.to(coverDiv, {
+      opacity: 1,
+      scale: 1,
       duration: 1.2,
-      scrambleText: {
-        text: "A personal portfolio website",
-        chars: "XO",
-        revealDelay: 0.4,
-        speed: 0.3,
-      },
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: coverDiv,
+        start: "top 85%",
+        toggleActions: "play none none none",
+        once: true
+      }
     });
-  }, []);
+
+    // Animate cover-div content
+    const coverContent = coverDiv.querySelector("p");
+    const coverImage = coverDiv.querySelector("img");
+    if (coverContent) {
+      gsap.from(coverContent, {
+        opacity: 0,
+        y: 30,
+        duration: 1,
+        delay: 0.3,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: coverDiv,
+          start: "top 85%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+    if (coverImage) {
+      gsap.from(coverImage, {
+        opacity: 0,
+        scale: 0.8,
+        duration: 1.2,
+        delay: 0.5,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: coverDiv,
+          start: "top 85%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    }
+  }
+
+  // Animate portfolio items individually
+  const portfolioItems = gsap.utils.toArray(".portfolio-item");
+  portfolioItems.forEach((item, index) => {
+    gsap.from(item, {
+      opacity: 0,
+      y: 50,
+      scale: 0.9,
+      duration: 0.8,
+      delay: index * 0.1,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: item,
+        start: "top 85%",
+        toggleActions: "play none none none",
+        once: true
+      }
+    });
+  });
+
+  // Animate gallery items
+  const galleryItems = gsap.utils.toArray(".gallery-item");
+  galleryItems.forEach((item, index) => {
+    gsap.from(item, {
+      opacity: 0,
+      y: 40,
+      duration: 0.7,
+      delay: index * 0.1,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: item,
+        start: "top 85%",
+        toggleActions: "play none none none",
+        once: true
+      }
+    });
+  });
+
+  // Animate skill categories
+  const skillCategories = gsap.utils.toArray(".skill-category");
+  skillCategories.forEach((category, index) => {
+    gsap.from(category, {
+      opacity: 0,
+      x: -30,
+      duration: 0.8,
+      delay: index * 0.15,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: category,
+        start: "top 85%",
+        toggleActions: "play none none none",
+        once: true
+      }
+    });
+  });
+
+  // Animate about blocks
+  const aboutBlocks = gsap.utils.toArray(".about-block");
+  aboutBlocks.forEach((block, index) => {
+    gsap.from(block, {
+      opacity: 0,
+      x: 50,
+      duration: 0.9,
+      delay: index * 0.2,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: block,
+        start: "top 85%",
+        toggleActions: "play none none none",
+        once: true
+      }
+    });
+  });
+
+  // Animate media player wrappers
+  const mediaWrappers = gsap.utils.toArray(".media-player-wrapper");
+  mediaWrappers.forEach((wrapper) => {
+    gsap.from(wrapper, {
+      opacity: 0,
+      y: 30,
+      scale: 0.95,
+      duration: 0.8,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: wrapper,
+        start: "top 85%",
+        toggleActions: "play none none none",
+        once: true
+      }
+    });
+  });
+
+  // Animate footer
+  const footer = document.querySelector("footer");
+  if (footer) {
+    gsap.from(footer, {
+      opacity: 0,
+      y: 30,
+      duration: 0.8,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: footer,
+        start: "top 90%",
+        toggleActions: "play none none none",
+        once: true
+      }
+    });
+  }
+});
 
   return (
     <>
       {/* Top Navigation */}
       <header className="main-header">
-        <nav className="main-nav">
+        <nav className="main-nav ">
           <div className="nav-container">
             <a href="#home" className="logo">
               RUCKY
@@ -89,7 +428,8 @@ export default function App() {
       </header>
 
       {/* Home Section */}
-      <section id="home" className="section hero-section">
+      <section id="home" className="section hero-section" data-section="01">
+        <span className="section-number">01</span>
         <div className="hero-background">
           <div className="line line-1"></div>
           <div className="line line-2"></div>
@@ -102,35 +442,43 @@ export default function App() {
         </div>
         <div className="hero-content">
           
-          <h1 className="hero-title pr-[450px] pt-24">RUCKY</h1>
-          
+          <h1 className="hero-title pr-[450px] pt-24">Rucky</h1>
           <div className="hero-subtitles">
-            <p className="hero-subtitle pb-10 pr-[1000px]">
+            <p className="hero-subtitle pb-10 pr-[1000px] glitch" data-text1="What R Does mean?" data-text2="Rise from Failure">
               <b>R</b>ise from Failure
             </p>
-            <p className="hero-subtitle pb-10 pr-[750px]">
+            <p className="hero-subtitle pb-10 pr-[750px] glitch" data-text1="What U Does mean?" data-text2="Understand Yourself">
               <b>U</b>nderstand Yourself
             </p>
-            <p className="hero-subtitle pb-10 pr-[250px]">
+            <p className="hero-subtitle pb-10 pr-[250px] glitch" data-text1="What C Does mean?" data-text2="Create Your Meaning">
               <b>C</b>reate Your Meaning
             </p>
-            <p className="hero-subtitle pb-10 pr-[570px]">
+            <p className="hero-subtitle pb-10 pr-[570px] glitch" data-text1="What K Does mean?" data-text2="Keep Learning">
               <b>K</b>eep Learning
             </p>
-            <p className="hero-subtitle pb-10 pr-[50px]">
+            <p className="hero-subtitle pb-10 pr-[50px] glitch" data-text1="What Y Does mean?" data-text2="You Decide Your Future">
               <b>Y</b>ou Decide Your Future
             </p>
           </div>
-          <p className="hero-quote pr-[70px]">A personal portfolio website</p>
+          <p className="hero-quote pr-[70px]">A personal portfolio website"</p>
         </div>
       </section>
 
-      <section className="cover-div">
-        <p>She said to me. and i said to her</p>
-        <img src="assets/img/abstractimg.gif" alt="" />
+      <section className="cover-div flex items-center gap-8" data-section="4.5">
+        <div className="pl-[1000px]">
+          <p className="font-split-1 ">Who am I<sup>?</sup></p>
+        </div>
+        <div className="pr-[200px]">
+          <p className=" ">Cursor AI is an advanced, AI-driven integrated development environment (IDE) designed to enhance developer productivity and streamline coding workflows.
+What is Cursor</p>
+        <img className="pr-[1000px]" src="assets/img/abstractimg.gif" alt="" />
+        </div>
+
       </section>
 
-      <section id="profile" className="section profile-section">
+
+      <section id="profile" className="section profile-section" data-section="02">
+        <span className="section-number">02</span>
         <div className="content-container">
           <h2 className="section-title">BIODATA &amp; EDUCATION</h2>
 
@@ -200,7 +548,8 @@ export default function App() {
         </div>
       </section>
 
-      <section id="about" className="section about-section">
+      <section id="about" className="section about-section" data-section="03">
+        <span className="section-number">03</span>
         <div className="content-container">
           <h2 className="section-title">ABOUT RUCKY</h2>
 
@@ -252,7 +601,8 @@ export default function App() {
         </div>
       </section>
 
-      <section id="skills" className="section skills-section">
+      <section id="skills" className="section skills-section" data-section="04">
+        <span className="section-number">04</span>
         <div className="content-container">
           <h2 className="section-title">TECH STACK</h2>
 
@@ -300,17 +650,19 @@ export default function App() {
         </div>
       </section>
 
-      <section id="portfolio" className="section portfolio-section">
+      <section className="cover-div section-divider" data-section="4.5">
+        <p className="font-split-1 pl-[400px] ">wHY You need TO HirE me<sup>?</sup></p>
+      </section>
+
+
+      <section id="portfolio" className="section portfolio-section" data-section="05">
+        <span className="section-number">05</span>
         <div className="content-container">
           <h2 className="section-title">PORTFOLIO</h2>
 
           <div className="portfolio-grid">
             <div className="portfolio-item">
               <div className="portfolio-image">
-                <img
-                  src="assets/img/steam-header.jpg"
-                  alt="Steam Header Design"
-                />
                 <div className="portfolio-overlay">
                   <h3>Steam Header Design</h3>
                   <p>Custom header design for Steam profile</p>
@@ -393,7 +745,8 @@ export default function App() {
         </div>
       </section>
 
-      <section id="multimedia" className="section multimedia-section">
+      <section id="multimedia" className="section multimedia-section" data-section="06">
+        <span className="section-number">06</span>
         <div className="content-container">
           <h2 className="section-title">MULTIMEDIA</h2>
 
@@ -428,8 +781,12 @@ export default function App() {
             </div>
           </div>
 
+      <section className="cover-div section-divider" data-section="4.5">
+        <p className="font-split-1 pl-[400px] ">Something that i love listening<sup>To?</sup></p>
+
+        
           <div className="audio-section">
-            <h3>Reality Club - Love Epiphany</h3>
+            <h3 className="text-white">Reality Club - Love Epiphany</h3>
             <div className="media-player-wrapper">
               <audio controls>
                 <source
@@ -440,9 +797,8 @@ export default function App() {
               </audio>
             </div>
           </div>
-
-          <div className="video-section">
-            <h3>Reality Club - Quick! Love!</h3>
+                    <div className="video-section">
+            <h3 className="text-white">Reality Club - Quick! Love!</h3>
             <div className="media-player-wrapper">
               <video controls>
                 <source
@@ -453,10 +809,12 @@ export default function App() {
               </video>
             </div>
           </div>
+      </section>
         </div>
       </section>
 
-      <section id="contact" className="section contact-section">
+      <section id="contact" className="section contact-section" data-section="07">
+        <span className="section-number">07</span>
         <div className="content-container">
           <h2 className="section-title">CONTACT</h2>
 
